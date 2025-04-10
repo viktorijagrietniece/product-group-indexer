@@ -36,17 +36,21 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
 
 
 # vias lapas (produktiem):
+# ! lai uzlabotu ātrumu var paspēlēties ar "max_workers" daudzumu un pamēģināt lietot dažādas "user-agent" vērtības:
 def scrape_rimi_lv_pages():
     # 1. lapa:
-    products, max_page = scrape_rimi_lv_page(page=1, return_max_page=True)
+    all_products, max_page = scrape_rimi_lv_page(page=1, return_max_page=True)
     # 2. līdz pēdējai lapai:
-    for page in range(2, max_page + 1):
-        try:
-            products += scrape_rimi_lv_page(page)
-        except Exception as e:
-            print(e)
-            return products
-    return products
+    pages = [i for i in range(2, max_page + 1)]
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+            for products in list(pool.map(scrape_rimi_lv_page, pages)):
+                all_products += products
+        return all_products
+    except Exception as e:
+        print(e)
+        print(f"INFO: scraped only {len(all_products)} products")
+        return all_products
 
 
 # tikai kategorijas:
