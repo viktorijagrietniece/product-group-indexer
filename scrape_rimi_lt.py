@@ -8,7 +8,7 @@ from fake_useragent import UserAgent
 UA = UserAgent()
 
 """
-scrape_rimi_lv_page un scrape_rimi_lv_pages:
+scrape_rimi_lt_page un scrape_rimi_lt_pages:
 
 max pageSize=100
 currentPage sākas ar 1 nevis 0
@@ -17,8 +17,8 @@ jāizmanto "user-agent", lai iegūtu datus
 
 
 # vienu lapu (produktiem):
-def scrape_rimi_lv_page(page=1, return_max_page=False):
-    url = f"https://www.rimi.lv/e-veikals/lv/meklesana?currentPage={page}&pageSize=100&query="
+def scrape_rimi_lt_page(page=1, return_max_page=False):
+    url = f"https://www.rimi.lt/e-parduotuve/lt/paieska?currentPage={page}&pageSize=100&query="
     response = requests.get(url, headers={"user-agent": UA.random})
     if response.status_code != 200:
         raise Exception(f"ERROR ({response.status_code}): {url}")
@@ -41,14 +41,14 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
 
 # vias lapas (produktiem):
 # ! lai uzlabotu ātrumu var paspēlēties ar "max_workers" vērtību:
-def scrape_rimi_lv_pages():
+def scrape_rimi_lt_pages():
     # 1. lapa:
-    all_products, max_page = scrape_rimi_lv_page(page=1, return_max_page=True)
+    all_products, max_page = scrape_rimi_lt_page(page=1, return_max_page=True)
     # 2. līdz pēdējai lapai:
     pages = [i for i in range(2, max_page + 1)]
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_page) as pool:
-            for products in list(pool.map(scrape_rimi_lv_page, pages)):
+            for products in list(pool.map(scrape_rimi_lt_page, pages)):
                 all_products += products
         return all_products
     except Exception as e:
@@ -58,8 +58,8 @@ def scrape_rimi_lv_pages():
 
 
 # tikai kategorijas:
-def scrape_rimi_lv_categories():
-    url = "https://www.rimi.lv/e-veikals/api/v1/content/category-tree?locale=lv"
+def scrape_rimi_lt_categories():
+    url = "https://www.rimi.lt/e-parduotuve/api/v1/content/category-tree?locale=lt"
     response = requests.get(url, headers={"user-agent": ""})
     main_categories = []
     subcategories = []
@@ -82,11 +82,11 @@ def scrape_rimi_lv_categories():
 
 
 # iegūst datus un saglabā datubāzē:
-def scrape_rimi_lv():
+def scrape_rimi_lt():
     # scrape:
-    main_categories, subcategories = scrape_rimi_lv_categories()
-    products = scrape_rimi_lv_pages()
-    conn = db_create_connection("rimi_lv.db")
+    main_categories, subcategories = scrape_rimi_lt_categories()
+    products = scrape_rimi_lt_pages()
+    conn = db_create_connection("rimi_lt.db")
     # main_categories:
     for mc in main_categories:
         id, name = mc
@@ -117,4 +117,4 @@ def scrape_rimi_lv():
 
 
 if __name__ == "__main__":
-    scrape_rimi_lv()
+    scrape_rimi_lt()
