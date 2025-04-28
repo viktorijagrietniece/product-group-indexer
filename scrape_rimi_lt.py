@@ -10,9 +10,12 @@ UA = UserAgent()
 """
 scrape_rimi_lt_page un scrape_rimi_lt_pages:
 
-max pageSize=100
-currentPage sākas ar 1 nevis 0
-jāizmanto "user-agent", lai iegūtu datus
+- max pageSize=100
+- currentPage sākas ar 1 nevis 0
+- jāizmanto "user-agent", lai iegūtu datus
+- "data-gtm-eec-product" vērtība mēdz izvadīt nepareizu cenu, tāpēc ir:
+    jālieto vērtības no price-tag klases objekta
+    (ja nepieciešams - cenu bez atlaides var iegūt no old-price-tag klases objekta)
 """
 
 
@@ -27,8 +30,27 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
     products = []
     # produkti pēc klases "js-product-container":
     for div in html.xpath('//div[contains(@class, "js-product-container")]'):
-        products.append(json.loads(div.get("data-gtm-eec-product")))
-    # izmet kļūdu, ja netika iegūti produktu ieraksti:
+        # visi nepieciešamie dati (cena te var būt kļūdaina un zīmols netiek norādīts):
+        product = json.loads(div.get("data-gtm-eec-product"))
+        # šāds ir elemeta piemērs, kas satur īsto cenu:
+        """
+        <div class="price-tag card__price">
+            <span>4</span>
+            <div>
+                <sup>29</sup>
+                <sub>€/kg</sub>
+            </div>
+        </div>
+        """
+        # iegūst īsto cenu, ja to nevar iegūt, tad preci nepievieno sarakstam (šādos gadījumos prece nav pieejama):
+        price_divs = div.xpath('.//div[contains(@class, "price-tag")]')
+        if price_divs:
+            price = price_divs[0].getchildren()
+            product["price"] = float(
+                f"{price[0].text_content()}.{price[1].getchildren()[0].text_content()}"
+            )
+            products.append(product)
+
     if products:
         print(f"SCARPED: scrape_rimi_lt_page (page={page})")
         # print(page)
@@ -41,7 +63,8 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
             )
             return products, max_page
         return products
-    raise Exception(f"ERROR ({response.status_code}): {url}")
+    else:
+        print(f"DIDNT ADD PRODUCTS FROM: scrape_rimi_lt_page (page={page})")
 
 
 # vias lapas (produktiem):
@@ -55,11 +78,11 @@ def scrape_rimi_lt_pages():
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_page) as pool:
             for products in list(pool.map(scrape_rimi_lt_page, pages)):
                 all_products += products
+        print("SCARPED: scrape_rimi_lt_pages")
         return all_products
     except Exception as e:
         print(e)
         print(f"INFO: scraped only {len(all_products)} products")
-        print("SCARPED: scrape_rimi_lt_pages")
         return all_products
 
 
