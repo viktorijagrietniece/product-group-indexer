@@ -30,10 +30,15 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
         products.append(json.loads(div.get("data-gtm-eec-product")))
     # izmet kļūdu, ja netika iegūti produktu ieraksti:
     if products:
+        print(f"SCARPED: scrape_rimi_lt_page (page={page})")
         # print(page)
         if return_max_page:
             # izvada maksimālo lapu skaitu:
-            max_page = int(html.xpath('//li[@class="pagination__item"][last()]/a')[0].text_content())
+            max_page = int(
+                html.xpath('//li[@class="pagination__item"][last()]/a')[
+                    0
+                ].text_content()
+            )
             return products, max_page
         return products
     raise Exception(f"ERROR ({response.status_code}): {url}")
@@ -54,6 +59,7 @@ def scrape_rimi_lt_pages():
     except Exception as e:
         print(e)
         print(f"INFO: scraped only {len(all_products)} products")
+        print("SCARPED: scrape_rimi_lt_pages")
         return all_products
 
 
@@ -61,59 +67,66 @@ def scrape_rimi_lt_pages():
 def scrape_rimi_lt_categories():
     url = "https://www.rimi.lt/e-parduotuve/api/v1/content/category-tree?locale=lt"
     response = requests.get(url, headers={"user-agent": ""})
-    main_categories = []
-    subcategories = []
+    categories = []
     if response.status_code != 200:
         raise Exception(f"ERROR ({response.status_code}): {url}")
     # galvenās kategorijas:
     for main_category in json.loads(response.text)["categories"]:
         main_category_id = main_category["url"]
         main_category_id = main_category_id[main_category_id.rfind("/") + 1 :]
-        main_categories.append((main_category_id, main_category["name"]))
-        # apakškategorijas:
-        for subcategory in main_category["descendants"]:
-            subcategory_id = subcategory["url"]
-            subcategory_id = subcategory_id[subcategory_id.rfind("/") + 1 :]
-            subcategories.append((subcategory_id, subcategory["name"], main_category_id))
+        categories.append((main_category_id, main_category["name"]))
+        # 2. līmeņa kategorijas:
+        for subcategory1 in main_category["descendants"]:
+            subcategory1_id = subcategory1["url"]
+            subcategory1_id = subcategory1_id[subcategory1_id.rfind("/") + 1 :]
+            categories.append((subcategory1_id, subcategory1["name"]))
+            # 3. līmeņa kategorijas:
+            for subcategory2 in subcategory1["descendants"]:
+                subcategory2_id = subcategory2["url"]
+                subcategory2_id = subcategory2_id[subcategory2_id.rfind("/") + 1 :]
+                categories.append((subcategory2_id, subcategory2["name"]))
     # izmet kļūdu, ja netika iegūtas kategorijas:
-    if main_categories and subcategories:
-        return main_categories, subcategories
+    if categories:
+        print("SCARPED: scrape_rimi_lt_categories")
+        return categories
     raise Exception(f"ERROR ({response.status_code}): {url}")
 
 
 # iegūst datus un saglabā datubāzē:
 def scrape_rimi_lt():
+    print("STARTED: scrape_rimi_lt")
+    filename = "rimi_lt.db"
+    if not os.path.exists(filename):
+        db_create(filename)
     # scrape:
-    main_categories, subcategories = scrape_rimi_lt_categories()
+    categories = scrape_rimi_lt_categories()
     products = scrape_rimi_lt_pages()
-    conn = db_create_connection("rimi_lt.db")
-    # main_categories:
-    for mc in main_categories:
-        id, name = mc
-        sql = f"""SELECT id FROM main_categories WHERE id='{id}';"""
+    conn = db_create_connection(filename)
+    # categories:
+    for c in categories:
+        id, name = c
+        sql = f"""SELECT id FROM categories WHERE id='{id}';"""
         if not db_get(conn=conn, sql=sql):
-            sql = f"""INSERT INTO main_categories (id,name) VALUES(?,?);"""
-            db_insert(conn, sql, mc)
-    # subcategories:
-    for s in subcategories:
-        id, name, main_categories_id = s
-        sql = f"""SELECT id FROM subcategories WHERE id='{id}';"""
-        if not db_get(conn=conn, sql=sql):
-            sql = f"""INSERT INTO subcategories (id,name,main_category_id) VALUES(?,?,?);"""
-            db_insert(conn, sql, s)
+            sql = f"""INSERT INTO categories (id,name) VALUES(?,?);"""
+            db_insert(conn, sql, c)
+    print("UPDATED: categories")
     # products:
     for product in products:
         # visus datus izņemot valūtu "currency", kas ir "EUR" un "brand", jo tas vienmēr uzrādās kā "None":
-        id, name, subcategories_id, brand, price, currency = tuple(product.values())
-        product = (id, name, subcategories_id, price)
+        id, name, category_id, brand, price, currency = tuple(product.values())
+        product = (id, name, category_id, price)
         sql = f"""SELECT id FROM products WHERE id={id};"""
         if not db_get(conn=conn, sql=sql):
-            sql = f"""INSERT INTO products (id,name,subcategory_id,price) VALUES(?,?,?,?);"""
+            sql = (
+                f"""INSERT INTO products (id,name,category_id,price) VALUES(?,?,?,?);"""
+            )
             db_insert(conn, sql, product)
         else:
             sql = f"""UPDATE products SET price = {price} WHERE id = {id};"""
             db_update(conn=conn, sql=sql)
+    print("UPDATED: products")
     conn.close()
+    print("FINISHED: scrape_rimi_lt")
 
 
 if __name__ == "__main__":

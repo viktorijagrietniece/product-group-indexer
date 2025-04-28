@@ -46,23 +46,16 @@ def db_insert(conn, sql, values):
 # izveido datubāzes tabulu struktūru:
 def db_create(filename):
     conn = db_create_connection(filename)
-
-    # galvenās kategorijas:
+    """
+    kategorijas:
+    galvenās kategorijas (1. līmeņa) - piem. SH-2 (Augļi un dārzeņi)
+    apakškategorijas (2. līmeņa) - piem. SH-2-1 (Augļi un ogas)
+    apakškategorijas (3. līmeņa) - piem. SH-2-1-3 (Banāni) 
+    """
     sql = """
-    CREATE TABLE main_categories(
+    CREATE TABLE categories(
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL
-    );
-    """
-    db_update(conn, sql)
-
-    # apakškategorijas:
-    sql = """
-    CREATE TABLE subcategories(
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        main_category_id,
-        FOREIGN KEY(main_category_id) REFERENCES main_categories(id)
     );
     """
     db_update(conn, sql)
@@ -72,9 +65,9 @@ def db_create(filename):
     CREATE TABLE products(
         id INT PRIMARY KEY,
         name TEXT NOT NULL,
-        subcategory_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
         price REAL NOT NULL,
-        FOREIGN KEY(subcategory_id) REFERENCES subcategories(id)
+        FOREIGN KEY(category_id) REFERENCES categories(id)
     );
     """
     db_update(conn, sql)
@@ -89,17 +82,31 @@ if __name__ == "__main__":
         if not os.path.exists(filename):
             db_create(filename)
 
-    # testi:
-    filename = "rimi_lt.db"
+    # testi (daudzums un 1. ierakts):
+    print("rimi_lv.db")
+    filename = "rimi_lv.db"
     conn = db_create_connection(filename)
 
-    sql = """SELECT * FROM main_categories;"""
+    sql = """SELECT * FROM categories;"""
     results = db_get(conn, sql)
     if results:
         print(len(results))
         print(results[0])
 
-    sql = """SELECT * FROM subcategories;"""
+    sql = """SELECT * FROM products;"""
+    results = db_get(conn, sql)
+    if results:
+        print(len(results))
+        print(results[0])
+
+    conn.close()
+
+    # testi (daudzums un 1. ierakts):
+    print("rimi_lt.db")
+    filename = "rimi_lt.db"
+    conn = db_create_connection(filename)
+
+    sql = """SELECT * FROM categories;"""
     results = db_get(conn, sql)
     if results:
         print(len(results))
