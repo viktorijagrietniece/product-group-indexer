@@ -8,8 +8,6 @@ from fake_useragent import UserAgent
 UA = UserAgent()
 
 """
-scrape_rimi_lt_page un scrape_rimi_lt_pages:
-
 - max pageSize=100
 - currentPage sākas ar 1 nevis 0
 - jāizmanto "user-agent", lai iegūtu datus
@@ -65,6 +63,7 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
         return products
     else:
         print(f"DIDNT ADD PRODUCTS FROM: scrape_rimi_lt_page (page={page})")
+        return products
 
 
 # vias lapas (produktiem):
@@ -82,7 +81,6 @@ def scrape_rimi_lt_pages():
         return all_products
     except Exception as e:
         print(e)
-        print(f"INFO: scraped only {len(all_products)} products")
         return all_products
 
 
