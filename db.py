@@ -66,7 +66,8 @@ def db_create(filename):
         id INT PRIMARY KEY,
         name TEXT NOT NULL,
         category_id TEXT NOT NULL,
-        price REAL NOT NULL,
+        current_price REAL NOT NULL,
+        full_price REAL NOT NULL,
         FOREIGN KEY(category_id) REFERENCES categories(id)
     );
     """

@@ -36,7 +36,7 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
     for div in html.xpath('//div[contains(@class, "js-product-container")]'):
         # visi nepieciešamie dati (cena te var būt kļūdaina un zīmols netiek norādīts):
         product = json.loads(div.get("data-gtm-eec-product"))
-        # šāds ir elemeta piemērs, kas satur īsto cenu:
+        # šāds ir elemeta piemērs, kas satur pašreizējo cenu (ar atlaidi, ja tāda ir):
         """
         <div class="price-tag card__price">
             <span>4</span>
@@ -46,15 +46,27 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
             </div>
         </div>
         """
-        # iegūst īsto cenu, ja to nevar iegūt, tad preci nepievieno sarakstam (šādos gadījumos prece nav pieejama):
+        # šāds ir elemeta piemērs, kas satur pilno cenu (bez atlaides):
+        """
+        <div class="old-price-tag card__old-price">
+            <span>0,99€</span>
+        </div>
+        """
+        # iegūst pašreizējo un pilno cenu, ja pašreizējo cenu nevar iegūt, tad preci nepievieno sarakstam (šādos gadījumos prece nav pieejama):
         price_divs = div.xpath('.//div[contains(@class, "price-tag")]')
         if price_divs:
             price = price_divs[0].getchildren()
-            product["price"] = float(
+            product["current_price"] = float(
                 f"{price[0].text_content()}.{price[1].getchildren()[0].text_content()}"
             )
+            old_price_divs = div.xpath('.//div[contains(@class, "old-price-tag")]')
+            if old_price_divs:
+                product["full_price"] = float(
+                    old_price_divs[0].getchildren()[0].text_content()[:-1].replace(',','.')
+                )
+            else:
+                product["full_price"] = product["current_price"]
             products.append(product)
-
     if products:
         print(f"SCARPED: scrape_rimi_lv_page (page={page})")
         # print(page)
@@ -140,16 +152,16 @@ def scrape_rimi_lv():
     # products:
     for product in products:
         # visus datus izņemot valūtu "currency", kas ir "EUR" un "brand", jo tas vienmēr uzrādās kā "None":
-        id, name, category_id, brand, price, currency = tuple(product.values())
-        product = (id, name, category_id, price)
+        id, name, category_id, brand, price, currency, current_price, full_price = (
+            tuple(product.values())
+        )
+        product = (id, name, category_id, current_price, full_price)
         sql = f"""SELECT id FROM products WHERE id={id};"""
         if not db_get(conn=conn, sql=sql):
-            sql = (
-                f"""INSERT INTO products (id,name,category_id,price) VALUES(?,?,?,?);"""
-            )
+            sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price) VALUES(?,?,?,?,?);"""
             db_insert(conn, sql, product)
         else:
-            sql = f"""UPDATE products SET price = {price} WHERE id = {id};"""
+            sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price} WHERE id = {id};"""
             db_update(conn=conn, sql=sql)
     print("UPDATED: products")
     conn.close()
