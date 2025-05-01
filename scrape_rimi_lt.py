@@ -5,6 +5,7 @@ import concurrent.futures
 from db import *
 from fake_useragent import UserAgent
 import time
+from datetime import datetime
 
 UA = UserAgent()
 
@@ -62,10 +63,14 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
             old_price_divs = div.xpath('.//div[contains(@class, "old-price-tag")]')
             if old_price_divs:
                 product["full_price"] = float(
-                    old_price_divs[0].getchildren()[0].text_content()[:-1].replace(',','.')
+                    old_price_divs[0]
+                    .getchildren()[0]
+                    .text_content()[:-1]
+                    .replace(",", ".")
                 )
             else:
                 product["full_price"] = product["current_price"]
+            product["last_modified"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             products.append(product)
     if products:
         print(f"SCARPED: scrape_rimi_lt_page (page={page})")
@@ -150,18 +155,37 @@ def scrape_rimi_lt():
             db_insert(conn, sql, c)
     print("UPDATED: categories")
     # products:
+    db_update(
+        conn=conn, sql=f"""UPDATE products SET currently_listed=FALSE;"""
+    )  # no sākuma visiem ierakstiem piešķir currently_listed=FALSE
     for product in products:
         # visus datus izņemot valūtu "currency", kas ir "EUR" un "brand", jo tas vienmēr uzrādās kā "None":
-        id, name, category_id, brand, price, currency, current_price, full_price = (
-            tuple(product.values())
-        )
-        product = (id, name, category_id, current_price, full_price)
+        (
+            id,
+            name,
+            category_id,
+            brand,
+            price,
+            currency,
+            current_price,
+            full_price,
+            last_modified,
+        ) = tuple(product.values())
+        product = (
+            id,
+            name,
+            category_id,
+            current_price,
+            full_price,
+            last_modified,
+            True,
+        )  # currently_listed=True
         sql = f"""SELECT id FROM products WHERE id={id};"""
         if not db_get(conn=conn, sql=sql):
-            sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price) VALUES(?,?,?,?,?);"""
+            sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price,last_modified,currently_listed) VALUES(?,?,?,?,?,?,?);"""
             db_insert(conn, sql, product)
         else:
-            sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price} WHERE id = {id};"""
+            sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed=TRUE WHERE id = {id};"""  # currently_listed=TRUE
             db_update(conn=conn, sql=sql)
     print("UPDATED: products")
     conn.close()

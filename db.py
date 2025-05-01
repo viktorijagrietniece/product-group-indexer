@@ -68,6 +68,8 @@ def db_create(filename):
         category_id TEXT NOT NULL,
         current_price REAL NOT NULL,
         full_price REAL NOT NULL,
+        last_modified DATETIME NOT NULL,
+        currently_listed BOOLEAN NOT NULL,
         FOREIGN KEY(category_id) REFERENCES categories(id)
     );
     """
