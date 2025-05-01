@@ -4,6 +4,7 @@ from lxml.html import fromstring  # https://lxml.de/lxmlhtml.html
 import concurrent.futures
 from db import *
 from fake_useragent import UserAgent
+import time
 
 UA = UserAgent()
 
@@ -22,6 +23,11 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
     url = f"https://www.rimi.lv/e-veikals/lv/meklesana?currentPage={page}&pageSize=100&query="
     response = requests.get(url, headers={"user-agent": UA.random})
     if response.status_code != 200:
+        if response.status_code == 504:
+            # pagaida 1 sekundi un mēģina vēlreiz:
+            print(f"TRYING AGAIN: (page={page})")
+            time.sleep(1)
+            return scrape_rimi_lv_page(page, return_max_page)
         raise Exception(f"ERROR ({response.status_code}): {url}")
     # HTML parsēšana:
     html = fromstring(response.text)
