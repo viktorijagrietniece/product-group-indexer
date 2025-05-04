@@ -3,5 +3,5 @@
 - `pip install requests`
 - `pip install lxml`
 - `pip install fake-useragent`
-### Var arī instalēt izmantotās versiajs ar:
+### Var arī instalēt izmantotās versijas ar:
 - `pip install -r requirements.txt`
