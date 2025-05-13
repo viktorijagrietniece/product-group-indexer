@@ -75,6 +75,19 @@ def db_create(filename):
     """
     db_update(conn, sql)
 
+    # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
+    sql = """
+    CREATE TABLE history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INT NOT NULL,
+        current_price REAL NOT NULL,
+        full_price REAL NOT NULL,
+        date DATETIME NOT NULL,
+        FOREIGN KEY(product_id) REFERENCES products(id)
+    );
+    """
+    db_update(conn, sql)
+
     conn.close()
 
 
@@ -90,7 +103,7 @@ if __name__ == "__main__":
     filename = "rimi_lv.db"
     conn = db_create_connection(filename)
 
-    sql = """SELECT * FROM categories;"""
+    sql = """SELECT * FROM categories ORDER BY id ASC;"""
     results = db_get(conn, sql)
     if results:
         print(len(results))
