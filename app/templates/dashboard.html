@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+    <select class="form-select d-inline w-auto"> <option>Veikals</option> </select>
+    <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
+    <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
+</div>
+<div class="d-flex justify-content-around mb-4">
+    <div class="border p-3 text-center">
+        <h5>Produktu skaits</h5>
+        <p>{{ data.product_count }}</p>
+    </div>
+    <div class="border p-3 text-center">
+        <h5>Cenu izmaiņas</h5>
+        <p>{{ data.price_change }}%</p>
+    </div>
+    <div class="border p-3 text-center">
+        <h5>Atlaides</h5>
+        <p>{{ data.discounts }}</p>
+    </div>
+</div>
+<canvas id="priceChart" height="100"></canvas>
+<script>
+    const ctx = document.getElementById('priceChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['May 10', 'May 15', 'May 20', 'May 25', 'May 30', 'June 5', 'June 10', 'June 15', 'June 20', 'June 25', 'June 30', 'July 5'],
+            datasets: [{
+                label: 'Cenas',
+                data: [45, 50, 55, 52, 57, 60, 58, 62, 65, 63, 67, 70],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+    });
+</script>
+<table class="table table-bordered mt-4">
+    <thead>
+        <tr>
+            <th>Produktu grupa</th>
+            <th>Pēdējā vid. cena</th>
+            <th>Cenu izmaiņas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.table_data %}
+        <tr>
+            <td>{{ item.group }}</td>
+            <td>{{ item.price }}</td>
+            <td>{{ item.change }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
