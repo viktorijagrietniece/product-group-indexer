@@ -43,8 +43,8 @@ def db_insert(conn, sql, values):
         raise Exception(e)
 
 
-# izveido datubāzes tabulu struktūru:
-def db_create(filename):
+# izveido Rimi datubāzes tabulu struktūru:
+def db_create_rimi(filename):
     conn = db_create_connection(filename)
     """
     kategorijas:
@@ -53,7 +53,7 @@ def db_create(filename):
     apakškategorijas (3. līmeņa) - piem. SH-2-1-3 (Banāni) 
     """
     sql = """
-    CREATE TABLE categories(
+    CREATE TABLE IF NOT EXISTS categories(
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL
     );
@@ -62,7 +62,7 @@ def db_create(filename):
 
     # produkti:
     sql = """
-    CREATE TABLE products(
+    CREATE TABLE IF NOT EXISTS products(
         id INT PRIMARY KEY,
         name TEXT NOT NULL,
         category_id TEXT NOT NULL,
@@ -77,7 +77,61 @@ def db_create(filename):
 
     # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
     sql = """
-    CREATE TABLE history(
+    CREATE TABLE IF NOT EXISTS history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INT NOT NULL,
+        current_price REAL NOT NULL,
+        full_price REAL NOT NULL,
+        date DATETIME NOT NULL,
+        FOREIGN KEY(product_id) REFERENCES products(id)
+    );
+    """
+    db_update(conn, sql)
+
+    conn.close()
+
+
+# izveido Barbora datubāzes tabulu struktūru:
+def db_create_barbora(filename):
+    conn = db_create_connection(filename)
+    # kategorijas (pilnais ceļš):
+    sql = """
+    CREATE TABLE IF NOT EXISTS categories(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    """
+    db_update(conn, sql)
+
+    # zīmoli:
+    sql = """
+    CREATE TABLE IF NOT EXISTS brands(
+        id INT PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    """
+    db_update(conn, sql)
+
+    # produkti:
+    sql = """
+    CREATE TABLE IF NOT EXISTS products(
+        id INT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        current_price REAL NOT NULL,
+        full_price REAL NOT NULL,
+        last_modified DATETIME NOT NULL,
+        currently_listed BOOLEAN NOT NULL,
+        brand_id INT,
+        FOREIGN KEY(category_id) REFERENCES categories(id),
+        FOREIGN KEY(brand_id) REFERENCES brands(id)
+    );
+    """
+    db_update(conn, sql)
+
+    # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
+    sql = """
+    CREATE TABLE IF NOT EXISTS history(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INT NOT NULL,
         current_price REAL NOT NULL,
@@ -96,42 +150,10 @@ if __name__ == "__main__":
     filenames = ["rimi_lv.db", "rimi_lt.db"]
     for filename in filenames:
         if not os.path.exists(filename):
-            db_create(filename)
+            db_create_rimi(filename)
 
-    # testi (daudzums un 1. ierakts):
-    print("rimi_lv.db")
-    filename = "rimi_lv.db"
-    conn = db_create_connection(filename)
-
-    sql = """SELECT * FROM categories ORDER BY id ASC;"""
-    results = db_get(conn, sql)
-    if results:
-        print(len(results))
-        print(results[0])
-
-    sql = """SELECT * FROM products;"""
-    results = db_get(conn, sql)
-    if results:
-        print(len(results))
-        print(results[0])
-
-    conn.close()
-
-    # testi (daudzums un 1. ierakts):
-    print("rimi_lt.db")
-    filename = "rimi_lt.db"
-    conn = db_create_connection(filename)
-
-    sql = """SELECT * FROM categories;"""
-    results = db_get(conn, sql)
-    if results:
-        print(len(results))
-        print(results[0])
-
-    sql = """SELECT * FROM products;"""
-    results = db_get(conn, sql)
-    if results:
-        print(len(results))
-        print(results[0])
-
-    conn.close()
+    # izveido Barbora lv un lt datubāzes failus ar tabulām:
+    filenames = ["barbora_lv.db", "barbora_lt.db"]
+    for filename in filenames:
+        if not os.path.exists(filename):
+            db_create_barbora(filename)

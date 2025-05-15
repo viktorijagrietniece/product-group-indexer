@@ -141,7 +141,7 @@ def scrape_rimi_lv():
     print("STARTED: scrape_rimi_lv")
     filename = "rimi_lv.db"
     if not os.path.exists(filename):
-        db_create(filename)
+        db_create_rimi(filename)
     # scrape:
     categories = scrape_rimi_lv_categories()
     products = scrape_rimi_lv_pages()
