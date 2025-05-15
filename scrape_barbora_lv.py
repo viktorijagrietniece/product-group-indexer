@@ -49,9 +49,10 @@ def scrape_barbora_lv_page(url, conn):
 
         # par zīmolui:
         brand_id = product["brand_id"]
-        brand_name = product["brand_name"]
-        sql = f"INSERT OR REPLACE INTO brands(id,name) VALUES (?,?);"
-        db_insert(conn=conn, sql=sql, values=(brand_id, brand_name))
+        if brand_id:
+            brand_name = product["brand_name"]
+            sql = f"INSERT OR REPLACE INTO brands(id,name) VALUES (?,?);"
+            db_insert(conn=conn, sql=sql, values=(brand_id, brand_name))
 
         # par produktu:
         id = product["id"]

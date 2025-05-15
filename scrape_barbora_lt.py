@@ -1,9 +1,7 @@
 import json
 from db import *
-from fake_useragent import UserAgent
-import time
 from datetime import datetime
-from playwright.sync_api import sync_playwright
+import cloudscraper
 
 # manuāli jāmaina vai jāizmanto javascript ģenerējoša metode:
 URL_PATHS = [
@@ -20,8 +18,6 @@ URL_PATHS = [
     "/namai-ir-laisvalaikis",
 ]
 
-UA = UserAgent()
-
 
 # atjauno datubāzi un izvada True/False par to vai ir vēl dati, ko skrāpēt no nākamās lapas:
 def process_json(json_data, conn):
@@ -35,9 +31,10 @@ def process_json(json_data, conn):
 
         # par zīmolui:
         brand_id = product["brand_id"]
-        brand_name = product["brand_name"]
-        sql = f"INSERT OR REPLACE INTO brands(id,name) VALUES (?,?);"
-        db_insert(conn=conn, sql=sql, values=(brand_id, brand_name))
+        if brand_id:
+            brand_name = product["brand_name"]
+            sql = f"INSERT OR REPLACE INTO brands(id,name) VALUES (?,?);"
+            db_insert(conn=conn, sql=sql, values=(brand_id, brand_name))
 
         # par produktu:
         id = product["id"]
@@ -97,34 +94,24 @@ def scrape_barbora_lt():
     conn = db_create_connection(filename)
     sql = f"UPDATE products SET currently_listed=FALSE;"  # no sākuma visiem ierakstiem piešķir currently_listed=FALSE
     db_update(conn=conn, sql=sql)
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        # visas kategorijas:
-        for url_path in URL_PATHS:
-            print(f"SCRAPING: {url_path}")
-            # 1. līdz pēdējai lapai kategorijā:
-            i = 1
-            scrape_next = True
-            while scrape_next:
-                try:
-                    page = browser.new_context().new_page()
-                    page.set_extra_http_headers({"User-Agent": UA.random})
-                    url = f"https://barbora.lt{url_path}?page={i}"
-                    page.goto(url, timeout=60000)
-                    text = page.content()
-                    temp = text[
-                        text.rfind("window.b_productList = ")
-                        + len("window.b_productList = ") :
-                    ]
-                    json_data = json.loads(temp[: temp.find("</script>")].strip()[:-1])
-                    scrape_next = process_json(json_data, conn)
-                    page.close()
-                    print(f"SCRAPED: {url} ({scrape_next})")
-                    i += 1
-                except:
-                    print(f"FAILED: {url} (RETRYING)")
-                    time.sleep(3)
-        browser.close()
+    # visas kategorijas:
+    scraper = cloudscraper.create_scraper()
+    for url_path in URL_PATHS:
+        print(f"SCRAPING: {url_path}")
+        # 1. līdz pēdējai lapai kategorijā:
+        i = 1
+        scrape_next = True
+        while scrape_next:
+            url = f"https://barbora.lt{url_path}?page={i}"
+            response = scraper.get(url)
+            text = response.text
+            temp = text[
+                text.rfind("window.b_productList = ") + len("window.b_productList = ") :
+            ]
+            json_data = json.loads(temp[: temp.find("</script>")].strip()[:-1])
+            scrape_next = process_json(json_data, conn)
+            print(f"SCRAPED: {url} ({scrape_next})")
+            i += 1
     conn.close()
 
 

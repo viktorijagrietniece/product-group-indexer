@@ -97,7 +97,7 @@ def db_create_barbora(filename):
     # kategorijas (pilnais ceļš):
     sql = """
     CREATE TABLE IF NOT EXISTS categories(
-        id TEXT PRIMARY KEY,
+        id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL
     );
     """
@@ -106,7 +106,7 @@ def db_create_barbora(filename):
     # zīmoli:
     sql = """
     CREATE TABLE IF NOT EXISTS brands(
-        id INT PRIMARY KEY,
+        id INT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL
     );
     """
@@ -115,7 +115,7 @@ def db_create_barbora(filename):
     # produkti:
     sql = """
     CREATE TABLE IF NOT EXISTS products(
-        id INT PRIMARY KEY,
+        id INT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
         category_id TEXT NOT NULL,
         current_price REAL NOT NULL,
@@ -132,7 +132,7 @@ def db_create_barbora(filename):
     # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
     sql = """
     CREATE TABLE IF NOT EXISTS history(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         product_id INT NOT NULL,
         current_price REAL NOT NULL,
         full_price REAL NOT NULL,
@@ -157,3 +157,7 @@ if __name__ == "__main__":
     for filename in filenames:
         if not os.path.exists(filename):
             db_create_barbora(filename)
+
+        # conn = db_create_connection(filename)
+        # db_update(conn, "DELETE FROM brands WHERE id IS NULL;")
+        # conn. close()
