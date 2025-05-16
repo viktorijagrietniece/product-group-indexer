@@ -11,6 +11,13 @@
         </select>
         <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
         <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="only_changed" value="true" id="onlyChangedCheck"
+                onchange="this.form.submit()" {% if only_changed %}checked{% endif %}>
+            <label class="form-check-label" for="onlyChangedCheck">
+                Tikai ar cenu izmaiņu
+            </label>
+        </div>
     </form>
 </div>
 <div class="d-flex justify-content-around mb-4">
@@ -46,9 +53,10 @@
 <table class="table table-bordered mt-4">
     <thead>
         <tr>
-            <th>Produktu grupa</th>
-            <th>Pēdējā vid. cena</th>
-            <th>Cenu izmaiņas</th>
+            <th>Produkta nosaukums</th>
+            <th>Tagadējā cena (€)</th>
+            <th>Iepriekšējā cena (€)</th>
+            <th>Cenu izmaiņa (%)</th>
         </tr>
     </thead>
     <tbody>
@@ -56,6 +64,7 @@
         <tr>
             <td>{{ item.group }}</td>
             <td>{{ item.price }}</td>
+            <td>{{ item.previous }}</td>
             <td>{{ item.change }}</td>
         </tr>
         {% endfor %}
