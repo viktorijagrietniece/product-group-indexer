@@ -2,9 +2,16 @@
 
 {% block content %}
 <div class="mb-3">
-    <select class="form-select d-inline w-auto"> <option>Veikals</option> </select>
-    <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
-    <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
+    <form method="get" action="/">
+        <select name="veikals" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
+            <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
+            <option value="rimi_lt" {% if selected == 'rimi_lt' %}selected{% endif %}>Rimi LT</option>
+            <option value="barbora_lv" {% if selected == 'barbora_lv' %}selected{% endif %}>Barbora LV</option>
+            <option value="barbora_lt" {% if selected == 'barbora_lt' %}selected{% endif %}>Barbora LT</option>
+        </select>
+        <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
+        <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
+    </form>
 </div>
 <div class="d-flex justify-content-around mb-4">
     <div class="border p-3 text-center">
