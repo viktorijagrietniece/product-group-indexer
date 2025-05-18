@@ -1,9 +1,10 @@
 import json
-from db import *
-from datetime import datetime
 import cloudscraper
+from datetime import datetime
+from app import db
+from app.models import Product, Category, Brand, PriceHistory
 
-# manuāli jāmaina vai jāizmanto javascript ģenerējoša metode:
+
 URL_PATHS = [
     "/darzoves-ir-vaisiai",
     "/pieno-gaminiai-ir-kiausiniai",
@@ -18,84 +19,85 @@ URL_PATHS = [
     "/namai-ir-laisvalaikis",
 ]
 
-
 # atjauno datubāzi un izvada True/False par to vai ir vēl dati, ko skrāpēt no nākamās lapas:
-def process_json(json_data, conn):
+def process_json(json_data):
     scrape_next = True
-    for product in json_data:
-        # par kategoriju:
-        category_id = product["category_id"]
-        category_name = product["category_name_full_path"]
-        sql = f"INSERT OR REPLACE INTO categories(id,name) VALUES (?,?);"
-        db_insert(conn=conn, sql=sql, values=(category_id, category_name))
 
-        # par zīmolui:
-        brand_id = product["brand_id"]
-        if brand_id:
-            brand_name = product["brand_name"]
-            sql = f"INSERT OR REPLACE INTO brands(id,name) VALUES (?,?);"
-            db_insert(conn=conn, sql=sql, values=(brand_id, brand_name))
-
-        # par produktu:
-        id = product["id"]
-        name = product["title"]
-        current_price = product["units"][0]["price"]  # ir arī product['price']
-        if product["units"][0].get("retail_price"):
-            full_price = product["units"][0]["retail_price"]  # cena bez atlaides
-        else:
-            full_price = current_price
-        results = db_get(
-            conn=conn,
-            sql=f"SELECT current_price, full_price, last_modified FROM products WHERE id={id};",
-        )
-        last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        currently_listed = True if product["status"] == "active" else False
-        if not results:
-            product = (
-                id,
-                name,
-                category_id,
-                current_price,
-                full_price,
-                last_modified,
-                currently_listed,
-                brand_id,
+    for item in json_data:
+        # par kategoriju
+        category = Category.query.get(item["category_id"])
+        if not category:
+            category = Category(
+                id=item["category_id"],
+                name=item["category_name_full_path"],
+                store="barbora_lt"
             )
-            sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price,last_modified,currently_listed,brand_id) VALUES(?,?,?,?,?,?,?,?);"""
-            db_insert(conn, sql, product)
-        else:
-            old_current_price, old_full_price, old_last_modified = results[0]
-            if current_price != old_current_price and full_price != old_full_price:
-                # atjauno produkta cenas:
-                sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed={currently_listed} WHERE id = {id};"""  # currently_listed=TRUE
-                db_update(conn=conn, sql=sql)
-                # "history" tabulai pievieno vecās cenu vērtības:
-                history = (
-                    id,
-                    old_current_price,
-                    old_full_price,
-                    old_last_modified,
+            db.session.add(category)
+
+        # par zīmolu
+        brand = None
+        if item.get("brand_id"):
+            brand = Brand.query.get(item["brand_id"])
+            if not brand:
+                brand = Brand(
+                    id=item["brand_id"],
+                    name=item["brand_name"],
+                    store="barbora_lt"
                 )
-                sql = f"""INSERT INTO history (product_id,current_price,full_price,date) VALUES(?,?,?,?);"""
-                db_insert(conn, sql, history)
-            else:
-                sql = f"""UPDATE products SET currently_listed={currently_listed} WHERE id={id};"""
-                db_update(conn=conn, sql=sql)
+                db.session.add(brand)
+
+        # par produktu
+        product = Product.query.get(item["id"])
+        current_price = item["units"][0]["price"]
+        full_price = item["units"][0].get("retail_price", current_price)
+        last_modified = datetime.now()
+        currently_listed = item["status"] == "active"
+
+        if not product:
+            product = Product(
+                id=item["id"],
+                name=item["title"],
+                category_id=item["category_id"],
+                current_price=current_price,
+                full_price=full_price,
+                last_modified=last_modified,
+                currently_listed=currently_listed,
+                brand_id=item["brand_id"] if brand else None,
+                store="barbora_lt"
+            )
+            db.session.add(product)
+        else:
+            if product.current_price != current_price or product.full_price != full_price:
+                # atjauno produkta cenas:
+                history = PriceHistory(
+                    product_id=product.id,
+                    current_price=product.current_price,
+                    full_price=product.full_price,
+                    date=product.last_modified,
+                    store="barbora_lt"
+                )
+                db.session.add(history)
+
+                product.current_price = current_price
+                product.full_price = full_price
+                product.last_modified = last_modified
+
+            product.currently_listed = currently_listed
+
+    db.session.commit()
+
     if len(json_data) < 52:
         scrape_next = False
+
     return scrape_next
 
 
 def scrape_barbora_lt():
-    filename = "barbora_lt.db"
-    if not os.path.exists(filename):
-        db_create_barbora(filename)
-
-    conn = db_create_connection(filename)
-    sql = f"UPDATE products SET currently_listed=FALSE;"  # no sākuma visiem ierakstiem piešķir currently_listed=FALSE
-    db_update(conn=conn, sql=sql)
+    with db.engine.connect() as conn:
+        conn.execute(db.text("UPDATE products SET currently_listed=FALSE"))
     # visas kategorijas:
     scraper = cloudscraper.create_scraper()
+
     for url_path in URL_PATHS:
         print(f"SCRAPING: {url_path}")
         # 1. līdz pēdējai lapai kategorijā:
@@ -105,15 +107,15 @@ def scrape_barbora_lt():
             url = f"https://barbora.lt{url_path}?page={i}"
             response = scraper.get(url)
             text = response.text
-            temp = text[
-                text.rfind("window.b_productList = ") + len("window.b_productList = ") :
-            ]
+            temp = text[text.rfind("window.b_productList = ") + len("window.b_productList = "):]
             json_data = json.loads(temp[: temp.find("</script>")].strip()[:-1])
-            scrape_next = process_json(json_data, conn)
+            scrape_next = process_json(json_data)
             print(f"SCRAPED: {url} ({scrape_next})")
             i += 1
-    conn.close()
 
 
 if __name__ == "__main__":
-    scrape_barbora_lt()
+    from app import app
+    with app.app_context():
+        db.create_all()
+        scrape_barbora_lt()
