@@ -21,7 +21,7 @@ UA = UserAgent()
 
 # vienu lapu (produktiem):
 def scrape_rimi_lv_page(page=1, return_max_page=False):
-    url = f"https://www.rimi.lv/e-veikals/lv/meklesana?currentPage={page}&pageSize=100&query=%3Aprice-desc%3AassortmentStatus%3AinAssortment" # austākā cena vispirms
+    url = f"https://www.rimi.lv/e-veikals/lv/meklesana?currentPage={page}&pageSize=100&query=%3Aprice-desc%3AassortmentStatus%3AinAssortment"  # austākā cena vispirms
     response = requests.get(url, headers={"user-agent": UA.random})
     if response.status_code != 200:
         if response.status_code == 504:
@@ -70,8 +70,7 @@ def scrape_rimi_lv_page(page=1, return_max_page=False):
                 )
             else:
                 product["full_price"] = product["current_price"]
-            product["last_modified"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            products.append(product)
+            products.append(tuple(product.values()))
     if products:
         print(f"SCARPED: scrape_rimi_lv_page (page={page})")
         # print(page)
@@ -101,10 +100,10 @@ def scrape_rimi_lv_pages():
             for products in list(pool.map(scrape_rimi_lv_page, pages)):
                 all_products += products
         print("SCARPED: scrape_rimi_lv_pages")
-        return all_products
+        return set(all_products)
     except Exception as e:
         print(e)
-        return all_products
+        return set(all_products)
 
 
 # tikai kategorijas:
@@ -174,8 +173,8 @@ def scrape_rimi_lv():
             currency,
             current_price,
             full_price,
-            last_modified,
-        ) = tuple(product.values())
+        ) = product
+        last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         product = (
             id,
             name,

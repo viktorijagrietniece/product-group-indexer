@@ -70,8 +70,7 @@ def scrape_rimi_lt_page(page=1, return_max_page=False):
                 )
             else:
                 product["full_price"] = product["current_price"]
-            product["last_modified"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            products.append(product)
+            products.append(tuple(product.values()))
     if products:
         print(f"SCARPED: scrape_rimi_lt_page (page={page})")
         # print(page)
@@ -101,10 +100,10 @@ def scrape_rimi_lt_pages():
             for products in list(pool.map(scrape_rimi_lt_page, pages)):
                 all_products += products
         print("SCARPED: scrape_rimi_lt_pages")
-        return all_products
+        return set(all_products)
     except Exception as e:
         print(e)
-        return all_products
+        return set(all_products)
 
 
 # tikai kategorijas:
@@ -174,8 +173,8 @@ def scrape_rimi_lt():
             currency,
             current_price,
             full_price,
-            last_modified,
-        ) = tuple(product.values())
+        ) = product
+        last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         product = (
             id,
             name,

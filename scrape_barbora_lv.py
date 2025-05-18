@@ -24,7 +24,7 @@ UA = UserAgent()
 
 
 # atjauno datubāzi un izvada True/False par to vai ir vēl dati, ko skrāpēt no nākamās lapas:
-def scrape_barbora_lv_page(url, conn):
+def scrape_barbora_lv_page(url, conn, last_modified):
     scrape_next = True
     response = requests.get(url, headers={"user-agent": UA.random})
     if response.status_code != 200:
@@ -66,7 +66,6 @@ def scrape_barbora_lv_page(url, conn):
             conn=conn,
             sql=f"SELECT current_price, full_price, last_modified FROM products WHERE id={id};",
         )
-        last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         currently_listed = True if product["status"] == "active" else False
         if not results:
             # jauns produkts:
@@ -103,6 +102,7 @@ def scrape_barbora_lv_page(url, conn):
 
 
 def scrape_barbora_lv():
+    last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     filename = "barbora_lv.db"
     if not os.path.exists(filename):
         db_create_barbora(filename)
@@ -118,7 +118,7 @@ def scrape_barbora_lv():
         scrape_next = True
         while scrape_next:
             url = f"https://barbora.lv{url_path}?page={i}"
-            scrape_next = scrape_barbora_lv_page(url, conn)
+            scrape_next = scrape_barbora_lv_page(url, conn, last_modified)
             i += 1
     conn.close()
 

@@ -20,7 +20,7 @@ URL_PATHS = [
 
 
 # atjauno datubāzi un izvada True/False par to vai ir vēl dati, ko skrāpēt no nākamās lapas:
-def process_json(json_data, conn):
+def process_json(json_data, conn, last_modified):
     scrape_next = True
     for product in json_data:
         # par kategoriju:
@@ -48,7 +48,6 @@ def process_json(json_data, conn):
             conn=conn,
             sql=f"SELECT current_price, full_price, last_modified FROM products WHERE id={id};",
         )
-        last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         currently_listed = True if product["status"] == "active" else False
         if not results:
             product = (
@@ -82,6 +81,7 @@ def process_json(json_data, conn):
 
 
 def scrape_barbora_lt():
+    last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     filename = "barbora_lt.db"
     if not os.path.exists(filename):
         db_create_barbora(filename)
@@ -104,7 +104,7 @@ def scrape_barbora_lt():
                 text.rfind("window.b_productList = ") + len("window.b_productList = ") :
             ]
             json_data = json.loads(temp[: temp.find("</script>")].strip()[:-1])
-            scrape_next = process_json(json_data, conn)
+            scrape_next = process_json(json_data, conn, last_modified)
             print(f"SCRAPED: {url} ({scrape_next})")
             i += 1
     conn.close()
