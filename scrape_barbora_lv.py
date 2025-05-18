@@ -69,6 +69,7 @@ def scrape_barbora_lv_page(url, conn):
         last_modified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         currently_listed = True if product["status"] == "active" else False
         if not results:
+            # jauns produkts:
             product = (
                 id,
                 name,
@@ -82,23 +83,19 @@ def scrape_barbora_lv_page(url, conn):
             sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price,last_modified,currently_listed,brand_id) VALUES(?,?,?,?,?,?,?,?);"""
             db_insert(conn, sql, product)
         else:
-            old_current_price, old_full_price, old_last_modified = results[0]
-            if current_price != old_current_price and full_price != old_full_price:
-                # atjauno produkta cenas:
-                sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed={currently_listed} WHERE id = {id};"""  # currently_listed=TRUE
-                db_update(conn=conn, sql=sql)
-                # "history" tabulai pievieno vecās cenu vērtības:
-                history = (
-                    id,
-                    old_current_price,
-                    old_full_price,
-                    old_last_modified,
-                )
-                sql = f"""INSERT INTO history (product_id,current_price,full_price,date) VALUES(?,?,?,?);"""
-                db_insert(conn, sql, history)
-            else:
-                sql = f"""UPDATE products SET currently_listed={currently_listed} WHERE id={id};"""
-                db_update(conn=conn, sql=sql)
+            # atjauno produkta cenas:
+            sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed={currently_listed} WHERE id = {id};"""
+            db_update(conn=conn, sql=sql)
+        # history:
+        history = (
+            id,
+            current_price,
+            full_price,
+            last_modified,
+        )
+        sql = f"""INSERT INTO history (product_id,current_price,full_price,date) VALUES(?,?,?,?);"""
+        db_insert(conn, sql, history)
+
     if len(json_data) < 52:
         scrape_next = False
     print(f"SCRAPED: {url} ({scrape_next})")
@@ -128,6 +125,3 @@ def scrape_barbora_lv():
 
 if __name__ == "__main__":
     scrape_barbora_lv()
-    # filename = "barbora_lv.db"
-    # conn = db_create_connection(filename)
-    # scrape_barbora_lv_page("https://barbora.lv/piena-produkti-un-olas?order=priceAsc&page=16", conn)

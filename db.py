@@ -75,7 +75,7 @@ def db_create_rimi(filename):
     """
     db_update(conn, sql)
 
-    # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
+    # history:
     sql = """
     CREATE TABLE IF NOT EXISTS history(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,7 +129,7 @@ def db_create_barbora(filename):
     """
     db_update(conn, sql)
 
-    # cenu izmaiņu vēsture (neieskaitot tagadējās produktu cenas - tās tiek pievienotas "history" tabulā pēc pašreizējo cenu izmaiņām datu ieguves brīdī):
+    # history:
     sql = """
     CREATE TABLE IF NOT EXISTS history(
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

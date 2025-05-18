@@ -21,7 +21,7 @@ UA = UserAgent()
 
 # vienu lapu (produktiem):
 def scrape_rimi_lt_page(page=1, return_max_page=False):
-    url = f"https://www.rimi.lt/e-parduotuve/lt/paieska?currentPage={page}&pageSize=100&query="
+    url = f"https://www.rimi.lt/e-parduotuve/lt/paieska?currentPage={page}&pageSize=100&query=%3Aprice-desc%3AassortmentStatus%3AinAssortment" # austākā cena vispirms
     response = requests.get(url, headers={"user-agent": UA.random})
     if response.status_code != 200:
         if response.status_code == 504:
@@ -188,26 +188,18 @@ def scrape_rimi_lt():
         sql = f"""SELECT current_price, full_price, last_modified FROM products WHERE id={id};"""
         results = db_get(conn=conn, sql=sql)
         if not results:
+            # jauni produkti:
             sql = f"""INSERT INTO products (id,name,category_id,current_price,full_price,last_modified,currently_listed) VALUES(?,?,?,?,?,?,?);"""
             db_insert(conn, sql, product)
         else:
-            old_current_price, old_full_price, old_last_modified = results[0]
-            if current_price != old_current_price and full_price != old_full_price:
-                # atjauno produkta cenas:
-                sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed=TRUE WHERE id = {id};"""  # currently_listed=TRUE
-                db_update(conn=conn, sql=sql)
-                # "history" tabulai pievieno vecās cenu vērtības:
-                history = (
-                    id,
-                    old_current_price,
-                    old_full_price,
-                    old_last_modified,
-                )
-                sql = f"""INSERT INTO history (product_id,current_price,full_price,date) VALUES(?,?,?,?);"""
-                db_insert(conn, sql, history)
-            else:
-                sql = f"""UPDATE products SET currently_listed=TRUE WHERE id={id};"""
-                db_update(conn=conn, sql=sql)
+            # esošie produkti:
+            sql = f"""UPDATE products SET current_price = {current_price}, full_price = {full_price}, last_modified='{last_modified}', currently_listed=TRUE WHERE id = {id};"""  # currently_listed=TRUE
+            db_update(conn=conn, sql=sql)
+        # history (dublikātu dati):
+        history = (id, current_price, full_price, last_modified)
+        sql = f"""INSERT INTO history (product_id,current_price,full_price,date) VALUES(?,?,?,?);"""
+        db_insert(conn, sql, history)  # bez currently_listed
+
     print("UPDATED: products")
     conn.close()
     print("FINISHED: scrape_rimi_lt")
