@@ -9,25 +9,24 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
 
-    - name: Run scrapers
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }} 
-      run: |
-        python scrape_barbora_lv.py
-        python scrape_barbora_lt.py
-        python scrape_rimi_lt.py
-        python scrape_rimi_lv.py    
-
+      - name: Run scrapers
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python scrape_barbora_lv.py
+          python scrape_barbora_lt.py
+          python scrape_rimi_lt.py
+          python scrape_rimi_lv.py
