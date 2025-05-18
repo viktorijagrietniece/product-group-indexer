@@ -11,13 +11,6 @@
         </select>
         <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
         <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="only_changed" value="true" id="onlyChangedCheck"
-                onchange="this.form.submit()" {% if only_changed %}checked{% endif %}>
-            <label class="form-check-label" for="onlyChangedCheck">
-                Tikai ar cenu izmaiņu
-            </label>
-        </div>
     </form>
 </div>
 <div class="d-flex justify-content-around mb-4">
@@ -70,4 +63,25 @@
         {% endfor %}
     </tbody>
 </table>
+<nav aria-label="Lapu navigācija" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if data.current_page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&only_changed={{ only_changed }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
+        </li>
+        {% endif %}
+
+        {% for p in range(1, data.total_pages + 1) %}
+        <li class="page-item {% if p == data.current_page %}active{% endif %}">
+            <a class="page-link" href="?veikals={{ selected }}&only_changed={{ only_changed }}&page={{ p }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+
+        {% if data.current_page < data.total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&only_changed={{ only_changed }}&page={{ data.current_page + 1 }}">Nākamā</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
 {% endblock %}

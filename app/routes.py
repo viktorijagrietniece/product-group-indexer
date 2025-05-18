@@ -22,11 +22,12 @@ def get_engine_and_tables(selected):
     metadata.reflect(bind=engine)
     return engine, metadata.tables["products"], metadata.tables["history"]
 
-# GALVENĀ LAPĀ — rāda produktus ar cenu izmaiņām (vai visus), limitē līdz 30
+# GALVENĀ LAPĀ — rāda produktus ar cenu izmaiņām, lapošana + filtrēšana
 @app.route("/", methods=["GET"])
 def dashboard_changes_only():
     selected = request.args.get("veikals", "barbora_lv")
-    only_changed = request.args.get("only_changed", "false").lower() == "true"
+    page = int(request.args.get("page", 1))
+    per_page = 15
 
     engine, products_table, history_table = get_engine_and_tables(selected)
     conn = engine.connect()
@@ -39,7 +40,6 @@ def dashboard_changes_only():
         current_price = product.current_price
         name = product.name
 
-        # Iegūst pēdējo cenu no vēstures
         last_history_row = conn.execute(
             select(history_table.c.current_price)
             .where(history_table.c.product_id == product_id)
@@ -54,8 +54,7 @@ def dashboard_changes_only():
         else:
             change_percent = round(((current_price - previous_price) / previous_price) * 100, 2)
 
-        # Ja filtrējam tikai mainītos produktus un izmaiņa ir 0 — izlaižam
-        if only_changed and change_percent == 0:
+        if change_percent == 0:
             continue
 
         result.append({
@@ -65,18 +64,34 @@ def dashboard_changes_only():
             "change": f"{change_percent:+.2f}%"
         })
 
-    # Rāda līdz 30 ierakstiem
-    limited_result = result[:30]
+    total = len(result)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = result[start:end]
 
-    data = {
-        "product_count": len(limited_result),
-        "discounts": 0,
-        "price_change": 0,
-        "table_data": limited_result
-    }
+    # Aizsardzība, lai vienmēr būtu lapošanas info
+    if not paginated:
+        data = {
+            "product_count": 0,
+            "discounts": 0,
+            "price_change": 0,
+            "table_data": [],
+            "current_page": page,
+            "total_pages": 1
+        }
+    else:
+        data = {
+            "product_count": total,
+            "discounts": 0,
+            "price_change": 0,
+            "table_data": paginated,
+            "current_page": page,
+            "total_pages": (total + per_page - 1) // per_page
+        }
 
-    return render_template("dashboard.html", data=data, selected=selected, only_changed=only_changed)
+    return render_template("dashboard.html", data=data, selected=selected)
 
+# PILNA PRODUKTU LAPA (bez lapošanas pagaidām)
 @app.route("/all", methods=["GET"])
 def dashboard_all_products():
     selected = request.args.get("veikals", "barbora_lv")
