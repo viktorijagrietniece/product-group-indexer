@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="mb-3">
+    <!-- Perioda izvēles forma -->
     <form method="get" action="/">
         Vidējās cenas starp veikaliem – Periods:
         <select class="ml-2 px-2 py-1 border rounded bg-white text-sm">
@@ -9,7 +10,10 @@
         </select>
     </form>
 </div>
-<canvas id="priceChart" height="100"></canvas>
+<!-- Diagramma-->
+<div style="max-width: 100%; overflow-x: auto;">
+    <canvas id="priceChart" width="600" height="300"></canvas>
+  </div>  
 <script type="application/javascript">
     const chartLabels = JSON.parse('{{ chart_labels | tojson | safe }}');
     const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
@@ -43,6 +47,7 @@
         }
     });
 </script><br><br>
+ <!-- Veikalu izvēle -->
 <form method="get" action="/">
     <select name="veikals" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
         <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
@@ -66,7 +71,10 @@
         <p>{{ data.discounts }}</p>
     </div>
 </div>
+<!-- Produktu tabula -->
+<h4 class="mb-3">Produkti ar cenu izmaiņām</h4>
 <table class="table table-bordered mt-4">
+    <!-- Tabulas galvene -->
     <thead>
         <tr>
             <th>Produkta nosaukums</th>
@@ -76,6 +84,7 @@
         </tr>
     </thead>
     <tbody>
+        <!-- Izvade katram produktam atsevišķā tabulas rindā -->
         {% for item in data.table_data %}
         <tr>
             <td>{{ item.group }}</td>
@@ -86,15 +95,29 @@
         {% endfor %}
     </tbody>
 </table>
+<!-- Lapošana (pagination) -->
 <nav aria-label="Lapu navigācija" class="mt-4">
     <ul class="pagination justify-content-center">
+
         {% if data.current_page > 1 %}
         <li class="page-item">
             <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
         </li>
         {% endif %}
 
-        {% for p in range(1, data.total_pages + 1) %}
+        {% if data.current_page > 4 %}
+            {% set start = data.current_page - 4 %}
+        {% else %}
+            {% set start = 1 %}
+        {% endif %}
+
+        {% if data.current_page + 3 < data.total_pages %}
+            {% set end = data.current_page + 3 %}
+        {% else %}
+            {% set end = data.total_pages %}
+        {% endif %}
+
+        {% for p in range(start, end + 1) %}
         <li class="page-item {% if p == data.current_page %}active{% endif %}">
             <a class="page-link" href="?veikals={{ selected }}&page={{ p }}">{{ p }}</a>
         </li>
@@ -105,6 +128,7 @@
             <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page + 1 }}">Nākamā</a>
         </li>
         {% endif %}
+
     </ul>
 </nav>
 {% endblock %}
