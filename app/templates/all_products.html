@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+    <!-- Veikala izvēles forma -->
+    <form method="get" action="/all" class="d-flex align-items-center gap-3">
+        <!-- Veikalu izvēle -->
+        <select name="veikals" onchange="this.form.submit()" class="form-select w-auto">
+            <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
+            <option value="rimi_lt" {% if selected == 'rimi_lt' %}selected{% endif %}>Rimi LT</option>
+            <option value="barbora_lv" {% if selected == 'barbora_lv' %}selected{% endif %}>Barbora LV</option>
+            <option value="barbora_lt" {% if selected == 'barbora_lt' %}selected{% endif %}>Barbora LT</option>
+        </select>
+    </form>
+</div>
+<!-- Produktu tabula -->
+<h4 class="mb-3">Pilns produktu saraksts</h4>
+<table class="table table-striped">
+    <!-- Tabulas galvene -->
+    <thead>
+        <tr>
+            <th>Nosaukums</th>
+            <th>Kategorija</th>
+            <th>Pašreizējā cena (€)</th>
+            <th>Pilnā cena (€)</th>
+            <th>Modificēts</th>
+            <th>Pieejamība</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Izvade katram produktam atsevišķā tabulas rindā -->
+        {% for item in data.table_data %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.category }}</td>
+            <td>{{ item.current_price }}</td>
+            <td>{{ item.full_price }}</td>
+            <td>{{ item.modified }}</td>
+            <td>{{ "🟩" if item.available else "🟥" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<!-- Lapošana (pagination) -->
+<nav aria-label="Lapu navigācija" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if data.current_page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
+        </li>
+        {% endif %}
+
+        {% if data.current_page > 4 %}
+            {% set start = data.current_page - 4 %}
+        {% else %}
+            {% set start = 1 %}
+        {% endif %}
+
+        {% if data.current_page + 3 < data.total_pages %}
+            {% set end = data.current_page + 3 %}
+        {% else %}
+            {% set end = data.total_pages %}
+        {% endif %}
+
+        {% for p in range(start, end + 1) %}
+        <li class="page-item {% if p == data.current_page %}active{% endif %}">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ p }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+
+        {% if data.current_page < data.total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page + 1 }}">Nākamā</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

@@ -1,18 +1,29 @@
 <!doctype html>
 <html lang="lv">
 <head>
+    <!-- Galvene: meta tagi, nosaukums, CSS -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cenu Monitorings</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+<!-- HTML body - dizaina izveide  -->
 <body>
     <div class="d-flex">
-        <div class="bg-dark text-white p-3" style="min-width: 200px;">
-            <h4>Cenu Monitorings</h4>
+        <div class="bg-light border-end p-3" style="min-width: 220px; height: 100vh;">
+            <h5 class="mb-4">Produktu Indeksētājs</h5>
+            <ul class="nav flex-column">
+                <li class="nav-item mb-2">
+                    <a href="/" class="nav-link {% if request.path == '/' %}fw-bold text-primary{% endif %}">Cenu izmaiņas</a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="/all" class="nav-link {% if request.path == '/all' %}fw-bold text-primary{% endif %}">Visi produkti</a>
+                </li>
+            </ul>
         </div>
-        <div class="flex-grow-1 p-4">
+        <div class="container mt-4">
+            <!-- Šeit tiks ievietots saturs no atvasinātajiem šabloniem -->
             {% block content %}{% endblock %}
         </div>
     </div>

@@ -2,17 +2,61 @@
 
 {% block content %}
 <div class="mb-3">
+    <!-- Perioda izvēles forma -->
     <form method="get" action="/">
-        <select name="veikals" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
-            <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
-            <option value="rimi_lt" {% if selected == 'rimi_lt' %}selected{% endif %}>Rimi LT</option>
-            <option value="barbora_lv" {% if selected == 'barbora_lv' %}selected{% endif %}>Barbora LV</option>
-            <option value="barbora_lt" {% if selected == 'barbora_lt' %}selected{% endif %}>Barbora LT</option>
+        Vidējās cenas starp veikaliem – Periods:
+        <select class="ml-2 px-2 py-1 border rounded bg-white text-sm">
+            <option selected>Jaunākais</option>
         </select>
-        <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
-        <select class="form-select d-inline w-auto"> <option>Periods</option> </select>
     </form>
 </div>
+<!-- Diagramma-->
+<div style="max-width: 100%; overflow-x: auto;">
+    <canvas id="priceChart" width="600" height="300"></canvas>
+  </div>  
+<script type="application/javascript">
+    const chartLabels = JSON.parse('{{ chart_labels | tojson | safe }}');
+    const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
+    const ctx = document.getElementById('priceChart');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Vidējā cena (€) pēc veikala',
+                data: chartData,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '€' }
+                },
+                x: {
+                    title: { display: true, text: 'Veikali' }
+                }
+            }
+        }
+    });
+</script><br><br>
+ <!-- Veikalu izvēle -->
+<form method="get" action="/">
+    <select name="veikals" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
+        <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
+        <option value="rimi_lt" {% if selected == 'rimi_lt' %}selected{% endif %}>Rimi LT</option>
+        <option value="barbora_lv" {% if selected == 'barbora_lv' %}selected{% endif %}>Barbora LV</option>
+        <option value="barbora_lt" {% if selected == 'barbora_lt' %}selected{% endif %}>Barbora LT</option>
+    </select>
+    <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
+</form><br><br>
 <div class="d-flex justify-content-around mb-4">
     <div class="border p-3 text-center">
         <h5>Produktu skaits</h5>
@@ -27,38 +71,64 @@
         <p>{{ data.discounts }}</p>
     </div>
 </div>
-<canvas id="priceChart" height="100"></canvas>
-<script>
-    const ctx = document.getElementById('priceChart');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['May 10', 'May 15', 'May 20', 'May 25', 'May 30', 'June 5', 'June 10', 'June 15', 'June 20', 'June 25', 'June 30', 'July 5'],
-            datasets: [{
-                label: 'Cenas',
-                data: [45, 50, 55, 52, 57, 60, 58, 62, 65, 63, 67, 70],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-    });
-</script>
+<!-- Produktu tabula -->
+<h4 class="mb-3">Produkti ar cenu izmaiņām</h4>
 <table class="table table-bordered mt-4">
+    <!-- Tabulas galvene -->
     <thead>
         <tr>
-            <th>Produktu grupa</th>
-            <th>Pēdējā vid. cena</th>
-            <th>Cenu izmaiņas</th>
+            <th>Produkta nosaukums</th>
+            <th>Tagadējā cena (€)</th>
+            <th>Iepriekšējā cena (€)</th>
+            <th>Cenu izmaiņa (%)</th>
         </tr>
     </thead>
     <tbody>
+        <!-- Izvade katram produktam atsevišķā tabulas rindā -->
         {% for item in data.table_data %}
         <tr>
             <td>{{ item.group }}</td>
             <td>{{ item.price }}</td>
+            <td>{{ item.previous }}</td>
             <td>{{ item.change }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<!-- Lapošana (pagination) -->
+<nav aria-label="Lapu navigācija" class="mt-4">
+    <ul class="pagination justify-content-center">
+
+        {% if data.current_page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
+        </li>
+        {% endif %}
+
+        {% if data.current_page > 4 %}
+            {% set start = data.current_page - 4 %}
+        {% else %}
+            {% set start = 1 %}
+        {% endif %}
+
+        {% if data.current_page + 3 < data.total_pages %}
+            {% set end = data.current_page + 3 %}
+        {% else %}
+            {% set end = data.total_pages %}
+        {% endif %}
+
+        {% for p in range(start, end + 1) %}
+        <li class="page-item {% if p == data.current_page %}active{% endif %}">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ p }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+
+        {% if data.current_page < data.total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page + 1 }}">Nākamā</a>
+        </li>
+        {% endif %}
+
+    </ul>
+</nav>
 {% endblock %}
