@@ -146,8 +146,27 @@ def scrape_rimi_lt():
 
         product = db.session.get(Product, id)
 
-        if not product:
-            new = Product(
+        if product:
+            # Vesture tiek appildinata vienmer
+            db.session.add(
+                PriceHistory(
+                    product_id=id,
+                    current_price=current_price,
+                    full_price=full_price,
+                    date=datetime.now(),
+                    store="rimi_lt"
+                )
+            )
+
+            # Atjauno eksistejosus prduktus
+            product.current_price = current_price
+            product.full_price = full_price
+            product.last_modified = last_modified
+            product.currently_listed = currently_listed
+
+        else:
+            # Pievieno pirmreizejus produktus
+            product = Product(
                 id=id,
                 name=name,
                 category_id=category_id,
@@ -157,26 +176,9 @@ def scrape_rimi_lt():
                 currently_listed=currently_listed,
                 store="rimi_lt"
             )
-            db.session.add(new)
-        else:
-            if (
-                product.current_price != current_price
-                or product.full_price != full_price
-            ):
-                db.session.add(
-                    PriceHistory(
-                        product_id=id,
-                        current_price=product.current_price,
-                        full_price=product.full_price,
-                        date=product.last_modified,
-                        store="rimi_lt"
-                    )
-                )
-                product.current_price = current_price
-                product.full_price = full_price
-                product.last_modified = last_modified
+            db.session.add(product)
 
-            product.currently_listed = currently_listed
+
 
     db.session.commit()
     print("FINISHED: scrape_rimi_lt")

@@ -150,23 +150,21 @@ def scrape_rimi_lv():
                 store="rimi_lv"
             ))
         else:
-            if (
-                product.current_price != current_price
-                or product.full_price != full_price
-            ):
-                db.session.add(PriceHistory(
-                    product_id=id,
-                    current_price=product.current_price,
-                    full_price=product.full_price,
-                    date=product.last_modified,
-                    store="rimi_lv"
-                ))
+    # Vesture tiek appildinata vienmer
+            db.session.add(PriceHistory(
+                product_id=id,
+                current_price=current_price,
+                full_price=full_price,
+                date=datetime.now(),
+                store="rimi_lv"
+            ))
 
-                product.current_price = current_price
-                product.full_price = full_price
-                product.last_modified = last_modified
-
+    # Atjauno produktu 
+            product.current_price = current_price
+            product.full_price = full_price
+            product.last_modified = last_modified
             product.currently_listed = currently_listed
+
 
     db.session.commit()
     print("FINISHED: scrape_rimi_lv")
