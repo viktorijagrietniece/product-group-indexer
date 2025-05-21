@@ -1,134 +1,173 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mb-3">
-    <!-- Perioda izvēles forma -->
-    <form method="get" action="/">
-        Vidējās cenas starp veikaliem – Periods:
-        <select class="ml-2 px-2 py-1 border rounded bg-white text-sm">
-            <option selected>Jaunākais</option>
-        </select>
+<div class="container py-4">
+    <h2 class="mb-4 text-center">Cenu pārskats – <strong>{{ selected|upper }}</strong></h2>
+
+    <form method="get" action="/" class="row g-3 align-items-center mb-4">
+        <div class="col-md-3">
+            <label for="veikals" class="form-label">Veikals</label>
+            <select name="veikals" id="veikals" class="form-select" onchange="this.form.submit()">
+                <option value="barbora_lv" {% if selected == "barbora_lv" %}selected{% endif %}>Barbora LV</option>
+                <option value="barbora_lt" {% if selected == "barbora_lt" %}selected{% endif %}>Barbora LT</option>
+                <option value="rimi_lv" {% if selected == "rimi_lv" %}selected{% endif %}>Rimi LV</option>
+                <option value="rimi_lt" {% if selected == "rimi_lt" %}selected{% endif %}>Rimi LT</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="kategorija" class="form-label">Kategorija</label>
+            <select name="kategorija" id="kategorija" class="form-select" onchange="this.form.submit()">
+                <option value="">Visas</option>
+                {% for cat in kategorijas %}
+                <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
+                    {{ category_names[cat] if category_names[cat] else cat }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
     </form>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Vidējās cenas pa dienām</h5>
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Cenu svārstīgums pēc produktu grupām</h5>
+                    <canvas id="volatilityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row text-center mb-4">
+        <div class="col-md-4">
+            <div class="p-3 bg-light border rounded shadow-sm">
+                <h6 class="mb-1">Produktu skaits</h6>
+                <h4>{{ data.product_count }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 bg-light border rounded shadow-sm">
+                <h6 class="mb-1">Cenu izmaiņas</h6>
+                <h4>{{ data.price_change }}%</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 bg-light border rounded shadow-sm">
+                <h6 class="mb-1">Atlaides</h6>
+                <h4>{{ data.discounts }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Produkti ar cenu izmaiņām</h5>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nosaukums</th>
+                    <th>Tagadējā cena (€)</th>
+                    <th>Iepriekšējā cena (€)</th>
+                    <th>Cenu izmaiņa (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data.table_data %}
+                <tr>
+                    <td>{{ item.group }}</td>
+                    <td>{{ item.price }}</td>
+                    <td>{{ item.previous }}</td>
+                    <td>{{ item.change }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Lapu navigācija">
+        <ul class="pagination justify-content-center">
+            {% if data.current_page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
+            </li>
+            {% endif %}
+            {% for p in range(1, data.total_pages + 1) %}
+            <li class="page-item {% if p == data.current_page %}active{% endif %}">
+                <a class="page-link" href="?veikals={{ selected }}&page={{ p }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            {% if data.current_page < data.total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page + 1 }}">Nākamā</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+
 </div>
-<!-- Diagramma-->
-<div style="max-width: 100%; overflow-x: auto;">
-    <canvas id="priceChart" width="600" height="300"></canvas>
-  </div>  
-<script type="application/javascript">
-    const chartLabels = JSON.parse('{{ chart_labels | tojson | safe }}');
-    const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
-    const ctx = document.getElementById('priceChart');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Vidējā cena (€) pēc veikala',
-                data: chartData,
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: '€' }
-                },
-                x: {
-                    title: { display: true, text: 'Veikali' }
-                }
-            }
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const lineLabels = {{ chart_labels | tojson }};
+const lineDatasets = [
+    {% for store, data in chart_series.items() %}
+    {
+        label: '{{ store }}',
+        data: {{ data | tojson }},
+        fill: false,
+        borderColor: 'rgba({{ 50 + loop.index0 * 60 }}, 99, 132, 1)',
+        tension: 0.1
+    },
+    {% endfor %}
+];
+
+new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+        labels: lineLabels,
+        datasets: lineDatasets
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+            x: { title: { display: true, text: 'Datums' } },
+            y: { title: { display: true, text: 'Vidējā cena (€)' } }
         }
-    });
-</script><br><br>
- <!-- Veikalu izvēle -->
-<form method="get" action="/">
-    <select name="veikals" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
-        <option value="rimi_lv" {% if selected == 'rimi_lv' %}selected{% endif %}>Rimi LV</option>
-        <option value="rimi_lt" {% if selected == 'rimi_lt' %}selected{% endif %}>Rimi LT</option>
-        <option value="barbora_lv" {% if selected == 'barbora_lv' %}selected{% endif %}>Barbora LV</option>
-        <option value="barbora_lt" {% if selected == 'barbora_lt' %}selected{% endif %}>Barbora LT</option>
-    </select>
-    <select class="form-select d-inline w-auto"> <option>Kategorija</option> </select>
-</form><br><br>
-<div class="d-flex justify-content-around mb-4">
-    <div class="border p-3 text-center">
-        <h5>Produktu skaits</h5>
-        <p>{{ data.product_count }}</p>
-    </div>
-    <div class="border p-3 text-center">
-        <h5>Cenu izmaiņas</h5>
-        <p>{{ data.price_change }}%</p>
-    </div>
-    <div class="border p-3 text-center">
-        <h5>Atlaides</h5>
-        <p>{{ data.discounts }}</p>
-    </div>
-</div>
-<!-- Produktu tabula -->
-<h4 class="mb-3">Produkti ar cenu izmaiņām</h4>
-<table class="table table-bordered mt-4">
-    <!-- Tabulas galvene -->
-    <thead>
-        <tr>
-            <th>Produkta nosaukums</th>
-            <th>Tagadējā cena (€)</th>
-            <th>Iepriekšējā cena (€)</th>
-            <th>Cenu izmaiņa (%)</th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Izvade katram produktam atsevišķā tabulas rindā -->
-        {% for item in data.table_data %}
-        <tr>
-            <td>{{ item.group }}</td>
-            <td>{{ item.price }}</td>
-            <td>{{ item.previous }}</td>
-            <td>{{ item.change }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<!-- Lapošana (pagination) -->
-<nav aria-label="Lapu navigācija" class="mt-4">
-    <ul class="pagination justify-content-center">
+    }
+});
 
-        {% if data.current_page > 1 %}
-        <li class="page-item">
-            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page - 1 }}">Iepriekšējā</a>
-        </li>
-        {% endif %}
+const volLabels = {{ volatility_data.labels | tojson }};
+const volValues = {{ volatility_data["values"] | tojson }};
 
-        {% if data.current_page > 4 %}
-            {% set start = data.current_page - 4 %}
-        {% else %}
-            {% set start = 1 %}
-        {% endif %}
-
-        {% if data.current_page + 3 < data.total_pages %}
-            {% set end = data.current_page + 3 %}
-        {% else %}
-            {% set end = data.total_pages %}
-        {% endif %}
-
-        {% for p in range(start, end + 1) %}
-        <li class="page-item {% if p == data.current_page %}active{% endif %}">
-            <a class="page-link" href="?veikals={{ selected }}&page={{ p }}">{{ p }}</a>
-        </li>
-        {% endfor %}
-
-        {% if data.current_page < data.total_pages %}
-        <li class="page-item">
-            <a class="page-link" href="?veikals={{ selected }}&page={{ data.current_page + 1 }}">Nākamā</a>
-        </li>
-        {% endif %}
-
-    </ul>
-</nav>
+new Chart(document.getElementById('volatilityChart'), {
+    type: 'bar',
+    data: {
+        labels: volLabels,
+        datasets: [{
+            label: 'Svārstīgums (standartnovirze €)',
+            data: volValues,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { beginAtZero: true, title: { display: true, text: '€' }},
+            y: { title: { display: true, text: 'Kategorija' }}
+        }
+    }
+});
+</script>
 {% endblock %}

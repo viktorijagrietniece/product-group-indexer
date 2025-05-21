@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Produktu nosaukumu grupētājs</h2>
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="veikals" class="form-label">Izvēlies veikalu:</label>
+                    <select name="veikals" id="veikals" class="form-select">
+                        {% for v in veikali %}
+                            <option value="{{ v }}" {% if v == veikals %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="nosaukums" class="form-label">Produkta nosaukums:</label>
+                    <input type="text" name="nosaukums" id="nosaukums"
+                           class="form-control" value="{{ nosaukums or '' }}" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Grupēt
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if lidzigie_produkti %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3"> Līdzīgie produkti pēc nosaukuma:</h5>
+                <ul class="list-group list-group-flush">
+                    {% for p in lidzigie_produkti %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ p.name }}</span>
+                            {% if p.price %}
+                                <span class="badge bg-success rounded-pill">{{ p.price }} €</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
